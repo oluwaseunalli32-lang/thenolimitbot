@@ -1,28 +1,25 @@
 import os
 import time
 import requests
-from openai import OpenAI
+import google.generativeai as genai
 
 TELEGRAM_TOKEN = os.environ["TELEGRAM_TOKEN"]
-client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
+GEMINI_KEY = os.environ["GEMINI_API_KEY"]
+
+genai.configure(api_key=GEMINI_KEY)
+model = genai.GenerativeModel("gemini-2.5-flash")
+
 API = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"
 
-SYSTEM_PROMPT = (
-    "Rewrite the user's text so it sounds natural and human-written. "
+PROMPT = (
+    "Rewrite the following text so it sounds natural and human-written. "
     "Keep the meaning. Use contractions. Vary sentence length. "
-    "Don't add explanations, just return the rewritten text."
+    "Return only the rewritten text, nothing else:\n\n{text}"
 )
 
 def humanize(text):
-    r = client.chat.completions.create(
-        model="gpt-4o-mini",
-        temperature=0.8,
-        messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": text},
-        ],
-    )
-    return r.choices[0].message.content.strip()
+    r = model.generate_content(PROMPT.format(text=text))
+    return r.text.strip()
 
 def send(chat_id, text):
     requests.post(f"{API}/sendMessage", json={"chat_id": chat_id, "text": text})
